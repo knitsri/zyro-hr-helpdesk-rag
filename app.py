@@ -44,43 +44,41 @@ st.markdown(
 
 @st.cache_resource
 def load_rag():
+    loader = PyPDFDirectoryLoader(CORPUS_PATH)
+    documents = loader.load()
+    
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=100
+    )
+    
+    chunks = splitter.split_documents(documents)
+    
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+    
+    vectorstore = FAISS.from_documents(
+        chunks,
+        embeddings
+    )
+    
+    retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={
+            "k": 5,
+            "fetch_k": 20
+        }
+    )
+    
+    llm = ChatGroq(
+        model=LLM_MODEL,
+        temperature=0.1,
+        max_tokens=512
+    )
+    
+    return retriever, llm
 
-```
-loader = PyPDFDirectoryLoader(CORPUS_PATH)
-documents = loader.load()
-
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=500,
-    chunk_overlap=100
-)
-
-chunks = splitter.split_documents(documents)
-
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
-
-vectorstore = FAISS.from_documents(
-    chunks,
-    embeddings
-)
-
-retriever = vectorstore.as_retriever(
-    search_type="mmr",
-    search_kwargs={
-        "k": 5,
-        "fetch_k": 20
-    }
-)
-
-llm = ChatGroq(
-    model=LLM_MODEL,
-    temperature=0.1,
-    max_tokens=512
-)
-
-return retriever, llm
-```
 
 retriever, llm = load_rag()
 
@@ -156,63 +154,57 @@ REFUSAL_MESSAGE = (
 # --------------------------------------------------
 
 def format_docs(docs):
-return "\n\n".join(doc.page_content for doc in docs)
+    return "\n\n".join(doc.page_content for doc in docs)
 
 def rag_chain(question):
-
-```
-chain = (
-    {
-        "context": retriever | format_docs,
-        "question": RunnablePassthrough()
-    }
-    | RAG_PROMPT
-    | llm
-    | StrOutputParser()
-)
-
-return chain.invoke(question)
-```
+    chain = (
+        {
+            "context": retriever | format_docs,
+            "question": RunnablePassthrough()
+        }
+        | RAG_PROMPT
+        | llm
+        | StrOutputParser()
+    )
+    
+    return chain.invoke(question)
 
 def ask_bot(question):
-
-```
-classifier_chain = (
-    OOS_PROMPT
-    | llm
-    | StrOutputParser()
-)
-
-result = classifier_chain.invoke(
-    {"question": question}
-).strip().upper()
-
-if result == "NO":
-    return {
-        "answer": REFUSAL_MESSAGE,
-        "sources": []
-    }
-
-docs = retriever.invoke(question)
-
-answer = rag_chain(question)
-
-sources = list(
-    set(
-        [
-            os.path.basename(
-                doc.metadata.get("source", "")
-            )
-            for doc in docs
-        ]
+    classifier_chain = (
+        OOS_PROMPT
+        | llm
+        | StrOutputParser()
     )
-)
-
-return {
-    "answer": answer,
-    "sources": sources
-}
-```
+    
+    result = classifier_chain.invoke(
+        {"question": question}
+    ).strip().upper()
+    
+    if result == "NO":
+        return {
+            "answer": REFUSAL_MESSAGE,
+            "sources": []
+        }
+    
+    docs = retriever.invoke(question)
+    
+    answer = rag_chain(question)
+    
+    sources = list(
+        set(
+            [
+                os.path.basename(
+                    doc.metadata.get("source", "")
+                )
+                for doc in docs
+            ]
+        )
+    )
+    
+    return {
+        "answer": answer,
+        "sources": sources
+    }
 
 # --------------------------------------------------
 
@@ -226,20 +218,19 @@ question = st.chat_input(
 
 if question:
 
-```
-with st.chat_message("user"):
-    st.markdown(question)
+    with st.chat_message("user"):
+        st.markdown(question)
+    
+    result = ask_bot(question)
+    
+    with st.chat_message("assistant"):
+    
+        st.markdown(result["answer"])
+    
+        if result["sources"]:
+    
+            st.markdown("### Sources")
+    
+            for src in result["sources"]:
+                st.markdown(f"- {src}")
 
-result = ask_bot(question)
-
-with st.chat_message("assistant"):
-
-    st.markdown(result["answer"])
-
-    if result["sources"]:
-
-        st.markdown("### Sources")
-
-        for src in result["sources"]:
-            st.markdown(f"- {src}")
-```
