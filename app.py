@@ -10,20 +10,20 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_groq import ChatGroq
 
-# ----------------------------
+# --------------------------------------------------
 
 # CONFIG
 
-# ----------------------------
+# --------------------------------------------------
 
 LLM_MODEL = "llama-3.3-70b-versatile"
 CORPUS_PATH = "."
 
-# ----------------------------
+# --------------------------------------------------
 
-# STREAMLIT UI
+# STREAMLIT PAGE
 
-# ----------------------------
+# --------------------------------------------------
 
 st.set_page_config(
 page_title="Zyro Dynamics HR Assistant",
@@ -33,14 +33,14 @@ page_icon="🤖"
 st.title("🤖 Zyro Dynamics HR Help Desk")
 
 st.markdown(
-"Ask questions about leave policy, benefits, payroll, WFH, POSH, onboarding and other HR topics."
+"Ask questions about leave policy, compensation, benefits, work from home, onboarding, POSH and other HR policies."
 )
 
-# ----------------------------
+# --------------------------------------------------
 
-# LOAD RAG PIPELINE
+# LOAD RAG COMPONENTS
 
-# ----------------------------
+# --------------------------------------------------
 
 @st.cache_resource
 def load_rag():
@@ -84,11 +84,11 @@ return retriever, llm
 
 retriever, llm = load_rag()
 
-# ----------------------------
+# --------------------------------------------------
 
 # PROMPTS
 
-# ----------------------------
+# --------------------------------------------------
 
 RAG_PROMPT = ChatPromptTemplate.from_template(
 """
@@ -149,11 +149,11 @@ REFUSAL_MESSAGE = (
 "I can only answer questions related to Zyro Dynamics HR policy documents."
 )
 
-# ----------------------------
+# --------------------------------------------------
 
 # HELPERS
 
-# ----------------------------
+# --------------------------------------------------
 
 def format_docs(docs):
 return "\n\n".join(doc.page_content for doc in docs)
@@ -201,9 +201,9 @@ sources = list(
     set(
         [
             os.path.basename(
-                d.metadata.get("source", "")
+                doc.metadata.get("source", "")
             )
-            for d in docs
+            for doc in docs
         ]
     )
 )
@@ -214,11 +214,11 @@ return {
 }
 ```
 
-# ----------------------------
+# --------------------------------------------------
 
 # CHAT UI
 
-# ----------------------------
+# --------------------------------------------------
 
 question = st.chat_input(
 "Ask an HR question..."
@@ -243,5 +243,3 @@ with st.chat_message("assistant"):
         for src in result["sources"]:
             st.markdown(f"- {src}")
 ```
-
-"""
