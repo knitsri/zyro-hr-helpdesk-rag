@@ -119,19 +119,28 @@ Determine whether the question is related to Zyro Dynamics HR policies.
 
 Topics include:
 
-* leave policy
-* payroll
-* benefits
-* compensation
-* onboarding
-* separation
-* work from home
-* code of conduct
-* POSH
-* performance reviews
-* travel reimbursement
-* employee handbook
-* HR policies
+- leave policy
+- payroll
+- compensation
+- benefits
+- travel and expense policy
+- travel reimbursement
+- onboarding
+- separation
+- work from home
+- employee handbook
+- code of conduct
+- prevention of sexual harassment (POSH)
+- performance reviews
+- IT policy
+- data security
+- acceptable use of company assets
+- company laptop
+- VPN usage
+- email policy
+- employee responsibilities
+- internet reimbursement
+- HR policies
 
 Question:
 {question}
@@ -183,7 +192,7 @@ def ask_bot(question):
         {"question": question}
     ).strip().upper()
     
-    if result == "NO":
+    if "NO" in result:
         return {
             "answer": REFUSAL_MESSAGE,
             "sources": []
